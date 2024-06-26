@@ -1,11 +1,5 @@
 #!/bin/bash
-unamestr=$(uname)
 
-if [[ ${unamestr} == CYGWIN* ]]
-then
-    export PYTHONPATH=$(cygpath -p -w ${PD})
-else
-    export PYTHONPATH=${PD}:${DEV}/wordlists/src
-fi
+export PYTHONPATH=${PD}
 
 export PATH=$PATH:$PD/bin
