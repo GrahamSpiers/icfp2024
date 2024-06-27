@@ -9,20 +9,21 @@ ICFP Contest 2024 `README.md`.
 [Discord](https://discord.com/channels/1118159165060292668/1118159165060292671)
 [Home](https://icfpcontest2024.github.io/)
 
-### Team
+### Team *Slow*
 
--   user: grahamsspiers@gmail.com
--   just contest + year (in Bitwarden)
+- user: <grahamsspiers@gmail.com>
+- just contest + year (in Bitwarden)
 
 [Team page](https://icfpcontest2024.github.io/team.html)
 
 Authorization: Bearer 921df178-ab9d-43a9-ad36-fc844c4647b6
 
-
 ## Setup
 
--   Access to github.  Done.
--   Update and access *golang*.  Done.
--   Update *Visual Code*.  Done.
--   Update *python*.  Done.
--   Setup `icfp2024` directory.  Done.
+- Access to github.  Done.
+- Update and access *golang*.  Done.
+- Update *Visual Code*.  Done.
+- Update *python*.  Done.
+- Setup `icfp2024` directory.  Done.
+- Add my *git* server.  Done.
+- Add git aliases.  Done.
