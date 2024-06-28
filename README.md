@@ -30,9 +30,13 @@ I'm going to use *python* since I don't seem to need extra computational speed.
 - Add command echo to use the [echo] service.
 - Add command scoreboard.
 - Add generic get command.
-- [lambdaman]
-- [spaceship]
-~ [language_test]
+- [lambdaman] cmds/lambdaman.py
+- [spaceship] cmds/spaceship.py
+- Redo lambdaman
+
+- [lambdaman] B failures
+- Faster spaceship.
+- [language_test]
 
 ## *python* packages
 
