@@ -6,10 +6,6 @@
 #   $python3 cmds/get.py scoreboard
 
 from sys import argv
-from icfp.icfp import assemble, eval, post
+from icfp.icfp import get
 
-program = [f'STR get {argv[1]}']
-
-icfp = assemble(program)
-r = post(icfp)
-print(eval(r.text))
+print(get(argv[1]))

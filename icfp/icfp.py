@@ -58,6 +58,24 @@ def tokenize(icfp: str) -> list[str]:
     return icfp.split(sep=' ')
 
 
+def get(what: str) -> str:
+    """
+    Invoke a cult service.
+    """
+    program = ['STR get '+what]
+    icfp = assemble(program)
+    r = post(icfp)
+    return eval(r.text)
+
+def send(text: str) -> str:
+    """
+    Send `text` to the cult.
+    """
+    program = [f'STR {text}']
+    r = post(assemble(program))
+    return eval(r.text)
+
+
 def err(what: str, code: int = 1) -> None:
     print(f"error: {what}")
     exit(code)
