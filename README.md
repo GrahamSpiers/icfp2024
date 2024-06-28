@@ -32,7 +32,7 @@ I'm going to use *python* since I don't seem to need extra computational speed.
 - Add generic get command.
 - [lambdaman] cmds/lambdaman.py
 - [spaceship] cmds/spaceship.py
-- Redo lambdaman
+- Redo lambdaman last one failed.
 
 - [lambdaman] B failures
 - Faster spaceship.
