@@ -26,7 +26,13 @@ I'm going to use *python* since I don't seem to need extra computational speed.
 - Write code to get the second problem.
 - Set up *pytest*.
 - Start working on second problem.  What tools are needed?
-- Add command show to
+- Add command interpret to eval ICFP.
+- Add command echo to use the [echo] service.
+- Add command scoreboard.
+- Add generic get command.
+- [lambdaman]
+- [spaceship]
+~ [language_test]
 
 ## *python* packages
 
