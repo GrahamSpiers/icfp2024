@@ -18,6 +18,22 @@ ICFP Contest 2024 `README.md`.
 
 Authorization: Bearer 921df178-ab9d-43a9-ad36-fc844c4647b6
 
+## Plan
+
+I'm going to use *python* since I don't seem to need extra computational speed.
+
+- Create a directory structure for a common package, commands, and problems.
+- Write code to get the second problem.
+- Set up *pytest*.
+- Start working on second problem.  What tools are needed?
+- Add command show to
+
+## *python* packages
+
+```
+pip3 install requests
+```
+
 ## Setup
 
 - Access to github.  Done.
