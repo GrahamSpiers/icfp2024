@@ -33,9 +33,10 @@ I'm going to use *python* since I don't seem to need extra computational speed.
 - [lambdaman] cmds/lambdaman.py
 - [spaceship] cmds/spaceship.py
 - Redo lambdaman last one failed.
+- [3d]
 
 - [lambdaman] B failures
-- Faster spaceship.
+- Faster spaceship and B failures.
 - [language_test]
 
 ## *python* packages
