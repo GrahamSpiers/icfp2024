@@ -105,7 +105,6 @@ def eval_tokens(token: str, rest: list[str]) -> tuple[str, list[str]]:
                     #print(f"{int_x} {int_y} {int_div} {is_neg}")
                     return str(-int_div) if is_neg else str(int_div), rest
                 case '%':
-                    # TODO: wrong?
                     int_x = int(x)
                     int_y = int(y)
                     is_neg = (int_x < 0 and int_y > 0) or (int_x > 0 and int_y < 0)
@@ -134,6 +133,11 @@ def eval_tokens(token: str, rest: list[str]) -> tuple[str, list[str]]:
                 case _:
                     err(f'bad B body "{body}" in "{token}"')
                     return '', rest
+        case '?':
+            b, rest = eval_tokens(rest[0], rest[1:])
+            x, rest = eval_tokens(rest[0], rest[1:])
+            y, rest = eval_tokens(rest[0], rest[1:])
+            return x if str_to_bool(b) else y, rest
         case _:
             err(f'bad indicator "{indicator}" in "{token}"')
             return '', rest
