@@ -59,6 +59,14 @@ def int_to_str(i: int) -> str:
         result += S_ASCII[d]
     return result[::-1]
 
+def str_to_int(s: str) -> int:
+    i = 0
+    for ch in s:
+        i *= 94
+        index = S_ASCII.index(ch)
+        i += index
+    return i
+
 def evaluate(icfp: str) -> str:
     tokens = tokenize(icfp)
     result, _ = eval_tokens(tokens[0], tokens[1:])
@@ -80,8 +88,7 @@ def eval_tokens(token: str, rest: list[str]) -> tuple[str, list[str]]:
                 case '!':
                     return icfp_bool(not str_to_bool(x)), rest
                 case '#':
-                    # TODO: Wrong!
-                    return str(int(base94(x))), rest
+                    return str(str_to_int(x)), rest
                 case '$':
                     return int_to_str(int(x)), rest
                 case _:
@@ -128,16 +135,19 @@ def eval_tokens(token: str, rest: list[str]) -> tuple[str, list[str]]:
                 case 'D':
                     return y[int(x):], rest
                 case '$':
-                    err('lambda not done')
+                    err('lambda not done ($)')
                     return '', rest
                 case _:
                     err(f'bad B body "{body}" in "{token}"')
                     return '', rest
         case '?':
             b, rest = eval_tokens(rest[0], rest[1:])
-            x, rest = eval_tokens(rest[0], rest[1:])
-            y, rest = eval_tokens(rest[0], rest[1:])
-            return x if str_to_bool(b) else y, rest
+            if str_to_bool(b):
+                return eval_tokens(rest[0], rest[1:])
+            else:
+                return eval_tokens(rest[1], rest[2:])
+        case 'L':
+            err(f'lambda not done (L)')
         case _:
             err(f'bad indicator "{indicator}" in "{token}"')
             return '', rest
@@ -150,25 +160,6 @@ def icfp_bool(tf: bool) -> str:
     return 'true' if tf else 'false'
 
 
-def eval(icfp: str) -> str:
-    #print(f"icfp:({icfp})")
-    return '\n'.join([
-        eval_token(token)
-        for token in tokenize(icfp)
-    ])
-
-def eval_token(token: str) -> str:
-    #print(f"token({token})")
-    match token[0]:
-        case 'S':
-            return ''.join([
-                S_ASCII[ord(ch)-33]
-                for ch in token[1:]
-            ])
-        case _:
-            err(f'unknown indicator ({token[0]}) in {token}')
-            return ""
-
 def tokenize(icfp: str) -> list[str]:
     return icfp.split(sep=' ')
 
@@ -180,15 +171,18 @@ def get(what: str) -> str:
     program = ['STR get '+what]
     icfp = assemble(program)
     r = post(icfp)
-    return eval(r.text)
+    return evaluate(r.text)
 
 def send(text: str) -> str:
     """
     Send `text` to the cult.
+    Note that:
+    $python3 cmds/send.py get index
+    is the same as get (above).
     """
     program = [f'STR {text}']
     r = post(assemble(program))
-    return eval(r.text)
+    return evaluate(r.text)
 
 
 def err(what: str, code: int = 1) -> None:

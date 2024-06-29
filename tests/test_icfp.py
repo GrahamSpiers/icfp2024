@@ -1,16 +1,16 @@
-from icfp.icfp import eval, assemble, evaluate
+from icfp.icfp import assemble, evaluate
 def test_hello_world() -> None:
     """
     SB%,,/}Q/2,$_
     is
     Hello World!
     """
-    assert 'Hello World!' == eval('SB%,,/}Q/2,$_')
+    assert 'Hello World!' == evaluate('SB%,,/}Q/2,$_')
 
 
 def test_assemble_str() -> None:
     """
-    The reverse of eval(s)
+    The reverse of evaluate(s)
     """
     assert 'SB%,,/}Q/2,$_' == assemble(['STR Hello World!'])
 
@@ -23,11 +23,13 @@ def test_token_lists() -> None:
         ('I$', '3'),
         ('I#', '2'),
         ('I/6', '1337'),
+        ('I4%34', '15818151'),
         ('I!', '0'),
         ('U- I$', '-3'),
         ('U- I(', '-7'),
         ('U! T', 'false'),
-        #('U# S4%34', '15818151'),
+        ('S4%34', 'test'),
+        ('U# S4%34', '15818151'),
         ('U$ I4%34', 'test'),
         ('B+ I# I$', '5'),
         ('B- I$ I#', '1'),
@@ -55,6 +57,7 @@ def test_token_lists() -> None:
         ('S9%3', 'yes'),
         ('? B= I# I$ S9%3 S./', 'no'),
         ('? B< I# I$ S9%3 S./', 'yes'),
+        ('B. SB%,,/ S}Q/2,$_', 'Hello World!'),
         #('', ''),
     ]
     for test in tests:
@@ -62,3 +65,8 @@ def test_token_lists() -> None:
         result = evaluate(test[0])
         assert test[1] == result, f'expected "{test[1]}" got "{result}" from "{test[0]}"'
 
+#def test_limits() -> None:
+#    # This uses 109 beta reductions...
+#    # And lambdas...
+#    result = evaluate('B$ B$ L" B$ L# B$ v" B$ v# v# L# B$ v" B$ v# v# L" L# ? B= v# I! I" B$ L$ B+ B$ v" v$ B$ v" v$ B- v# I" I%')
+#    assert '16' == result
