@@ -2,6 +2,8 @@
 
 ICFP Contest 2024 `README.md`.
 
+I don't understand why language test fails.  Ahh!  Stopping.
+
 ## Info
 
 [Task](https://icfpcontest2024.github.io/task.html)
