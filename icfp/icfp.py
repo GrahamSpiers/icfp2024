@@ -69,10 +69,16 @@ def str_to_int(s: str) -> int:
 
 def evaluate(icfp: str) -> str:
     tokens = tokenize(icfp)
-    result, _ = eval_tokens(tokens[0], tokens[1:])
+    result, _ = eval_tokens(tokens)
     return result
 
-def eval_tokens(token: str, rest: list[str]) -> tuple[str, list[str]]:
+def eval_tokens(tokens: list[str]) -> tuple[str, list[str]]:
+    """
+    Process a tokens into a string and remaining tokens.
+    ƒ is used for lambda.
+    """
+    token = tokens[0]
+    rest = tokens[1:]
     indicator = token[0]
     body = token[1:]
     match indicator:
@@ -81,7 +87,7 @@ def eval_tokens(token: str, rest: list[str]) -> tuple[str, list[str]]:
         case 'I': return str(base94(body)), rest
         case 'S': return s_to_str(body), rest
         case 'U':
-            x, rest = eval_tokens(rest[0], rest[1:])
+            x, rest = eval_tokens(rest)
             match body:
                 case '-':
                     return str(-int(x)), rest
@@ -95,8 +101,8 @@ def eval_tokens(token: str, rest: list[str]) -> tuple[str, list[str]]:
                     err(f'bad U body "{body}" in "{token}"')
                     return '', rest
         case 'B':
-            x, rest = eval_tokens(rest[0], rest[1:])
-            y, rest = eval_tokens(rest[0], rest[1:])
+            x, rest = eval_tokens(rest)
+            y, rest = eval_tokens(rest)
             match body:
                 case '+':
                     return str(int(x) + int(y)), rest
@@ -141,11 +147,11 @@ def eval_tokens(token: str, rest: list[str]) -> tuple[str, list[str]]:
                     err(f'bad B body "{body}" in "{token}"')
                     return '', rest
         case '?':
-            b, rest = eval_tokens(rest[0], rest[1:])
+            b, rest = eval_tokens(rest)
             if str_to_bool(b):
-                return eval_tokens(rest[0], rest[1:])
+                return eval_tokens(rest)
             else:
-                return eval_tokens(rest[1], rest[2:])
+                return eval_tokens(rest[1:])
         case 'L':
             err(f'lambda not done (L)')
         case _:
