@@ -13,6 +13,89 @@ S_ASCII = '''abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!"#$%
 I_BASE = 94
 ZERO_INDEX = 33
 
+# B
+
+def tok_b_to_bool(tok_b: str) -> bool:
+    return tok_b == 'T'
+
+def bool_to_tok_b(tf: bool) -> str:
+    return 'T' if tf else 'F'
+
+def str_to_bool(s: str) -> bool:
+    return s == 'true'
+
+def icfp_bool(tf: bool) -> str:
+    return 'true' if tf else 'false'
+
+
+# I
+
+def tok_i_to_int(tok_i: str) -> int:
+    return base94_to_int(tok_i[1:])
+
+def int_to_tok_i(i: int) -> str:
+    return 'I' + str(int_to_str(i))
+
+def base94_to_int(s: str) -> int:
+    i = 0
+    for ch in s:
+        i *= I_BASE
+        i += ord(ch) - ZERO_INDEX
+    return i
+
+def int_to_str(i: int) -> str:
+    result = ''
+    if i == 0:
+        return '!'
+    while i:
+        d = i % I_BASE
+        #i -= d
+        i //= I_BASE
+        result += S_ASCII[d]
+    return result[::-1]
+
+def s_str_to_int(s: str) -> int:
+    i = 0
+    for ch in s:
+        i *= I_BASE
+        index = S_ASCII.index(ch)
+        i += index
+    return i
+
+def int_to_base94(i: int) -> str:
+    if i == 0:
+        return '!'
+    s = ''
+    while i > 0:
+        s += chr(ZERO_INDEX + i % I_BASE)
+        i //= I_BASE
+    return s[::-1]
+
+# S
+
+def tok_s_to_str(tok_s: str) -> str:
+    return s_to_str(tok_s[1:])
+
+def str_to_tok_s(s: str) -> str:
+    return 'S' + ''.join([
+        to_s(ascii_ch)
+        for ascii_ch in s
+    ])
+
+def to_s(ascii_ch: str) -> str:
+    index = S_ASCII.index(ascii_ch)
+    return chr(ZERO_INDEX + index)
+
+def s_to_str(s: str) -> str:
+    return ''.join([
+        S_ASCII[ord(ch)-ZERO_INDEX]
+        for ch in s
+    ])
+
+
+# Assembly
+# Turned out to be not needed.
+
 def assemble(program: list[str]) -> str:
     """
     Assemble a program (a list of instructions).  Possible instructions are:
@@ -25,49 +108,12 @@ def assemble(program: list[str]) -> str:
 
 def assemble_instruction(inst: str) -> str:
     if inst.startswith('STR '):
-        return str_to_s(inst[4:])
+        return str_to_tok_s(inst[4:])
     else:
         err(f"unknown instruction label in ({inst})")
 
-def to_s(ascii_ch: str) -> str:
-    index = S_ASCII.index(ascii_ch)
-    return chr(33 + index)
 
-def str_to_s(text: str) -> str:
-    return 'S' + ''.join([
-        to_s(ascii_ch)
-        for ascii_ch in text
-    ])
-
-def s_to_str(s: str) -> str:
-    return ''.join([
-        S_ASCII[ord(ch)-33]
-        for ch in s
-    ])
-
-def base94(body: str) -> int:
-    i = 0
-    for ch in body:
-        i *= 94
-        i += ord(ch) - ord('!')
-    return i
-
-def int_to_str(i: int) -> str:
-    result = ''
-    while i:
-        d = i % 94
-        i -= d
-        i //= 94
-        result += S_ASCII[d]
-    return result[::-1]
-
-def str_to_int(s: str) -> int:
-    i = 0
-    for ch in s:
-        i *= 94
-        index = S_ASCII.index(ch)
-        i += index
-    return i
+# Evaluator 3
 
 def evaluate(icfp: str) -> str:
     tokens = tokenize(icfp)
@@ -120,7 +166,7 @@ def evaluate_icfp(icfp: list[str], vars: dict[str, list[str]] = {}, later: list[
     match indicator:
         case 'T': return 'true'
         case 'F': return 'false'
-        case 'I': return str(base94(body))
+        case 'I': return str(base94_to_int(body))
         case 'S': return s_to_str(body)
         case 'U':
             x_icfp, rest = extract_icfp(rest)
@@ -133,7 +179,7 @@ def evaluate_icfp(icfp: list[str], vars: dict[str, list[str]] = {}, later: list[
                 case '!':
                     return icfp_bool(not str_to_bool(x))
                 case '#':
-                    return str(str_to_int(x))
+                    return str(s_str_to_int(x))
                 case '$':
                     return int_to_str(int(x))
                 case _:
@@ -181,7 +227,7 @@ def evaluate_icfp(icfp: list[str], vars: dict[str, list[str]] = {}, later: list[
                     return icfp_bool(int(x) > int(y))
                 case '=':
                     #return icfp_bool(int(x) == int(y))
-                    return x == y
+                    return icfp_bool(x == y)
                 case '|':
                     return icfp_bool(str_to_bool(x) or str_to_bool(y))
                 case '&':
@@ -218,17 +264,11 @@ def evaluate_icfp(icfp: list[str], vars: dict[str, list[str]] = {}, later: list[
             err(f'bad indicator "{indicator}" in "{token}"')
             return '', rest
 
-def str_to_bool(s: str) -> bool:
-    return s == 'true'
-
-def icfp_bool(tf: bool) -> str:
-    return 'true' if tf else 'false'
-
-
 def tokenize(icfp: str) -> list[str]:
     return icfp.split(sep=' ')
 
 
+# Communications
 
 def get(what: str) -> str:
     """
@@ -259,11 +299,6 @@ def show(text: str) -> str:
     r = post(assemble(program))
     return r.text
 
-def err(what: str, code: int = 1) -> None:
-    print(f"error: {what}")
-    exit(code)
-
-
 def post(message: str):
     r = requests.post(
             CULT_URL,
@@ -272,3 +307,10 @@ def post(message: str):
     if r.status_code != 200:
         err(f'bad http post status {r.status_code}')
     return r
+
+
+# Errors
+
+def err(what: str, code: int = 1) -> None:
+    print(f"error: {what}")
+    exit(code)
