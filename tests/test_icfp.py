@@ -86,6 +86,9 @@ def test_hyper_lambda() -> None:
         ('''B$ L" B+ v" v" B* I$ I#''', '12'),
         #('SB%,,/}Q/2,$_', 'Hello World!'),
         ('B$ L$ v$ I#', '2'),
+        ('B$ B$ L1 L2 v2 I! I$', '3'),
+        ('B$ B$ L1 L2 v1 I! I$', '0'),
+        ('B$ L# B$ L" B+ v" v" B* I$ I# v8', '12'),
         ('B$ B$ L# L$ v# SB%,,/}Q/2,$_ IK', 'Hello World!'),
         ('B$ B$ L# L$ v# B. SB%,,/ S}Q/2,$_ IK', 'Hello World!'),
     ]
@@ -94,8 +97,8 @@ def test_hyper_lambda() -> None:
         result = hyper_evaluate(test[0])
         assert test[1] == result, f'expected "{test[1]}" got "{result}" from "{test[0]}"'
 
-#def test_hyper_limits() -> None:
-#    # This uses 109 beta reductions...
-#    # And lambdas...
-#    result = hyper_evaluate('B$ B$ L" B$ L# B$ v" B$ v# v# L# B$ v" B$ v# v# L" L# ? B= v# I! I" B$ L$ B+ B$ v" v$ B$ v" v$ B- v# I" I%')
-#    assert '16' == result
+def test_hyper_limits() -> None:
+    # This uses 109 beta reductions...
+    # And lambdas...
+    result = hyper_evaluate('B$ B$ L" B$ L# B$ v" B$ v# v# L# B$ v" B$ v# v# L" L# ? B= v# I! I" B$ L$ B+ B$ v" v$ B$ v" v$ B- v# I" I%')
+    assert '16' == result

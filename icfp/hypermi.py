@@ -8,7 +8,8 @@ from icfp.tfis import tok_i_to_int, s_to_str, base94_to_int, int_to_base94
 
 def hyper_evaluate(icfp_str: str) -> str:
     icfp = hyper_compile(icfp_str)
-    result = icfp.run({}, [])
+    print(icfp.show())
+    result = icfp.run()
     if isinstance(result, str):
         return s_to_str(result)
     else:
@@ -24,24 +25,35 @@ class ICFP:
         if isinstance(typed[0], ICFP):
             return typed[0].extract(typed[1:])
         return typed[1:]
-    def run(self, scope: dict[str, any], later_stack: list[any]) -> any:
+    def run(self) -> any:
         #print(f'ICFP.run {scope} {later_stack}')
-        return eval(self.sub[0], scope, later_stack)
+        return eval(self.sub[0])
+    def substitute(self, key: str, lambda_icfp: any) -> None:
+        #print(f'replacing {key} with {_show(lambda_icfp)}')
+        if isinstance(self, v) and self.key == key:
+            self.sub.append(lambda_icfp)
+        else:
+            for sub in self.sub:
+                if isinstance(sub, ICFP):
+                    sub.substitute(key, lambda_icfp)
     def show(self) -> str:
         return _show(self.sub[0])
 
-def eval(what: any, scope: dict[str, any], later_stack: list[any]) -> any:
+
+def eval(what: any) -> any:
     if isinstance(what, ICFP):
-        return what.run(scope, later_stack)
+        return what.run()
     else:
         #print(f'-> {what}')
         return what
+
 
 def _show(what: any) -> str:
     if isinstance(what, ICFP):
         return what.show()
     else:
         return str(what)
+
 
 class Unary(ICFP):
     def __init__(self, token: str) -> None:
@@ -62,13 +74,14 @@ class Unary(ICFP):
         if isinstance(typed[0], ICFP):
             return typed[0].extract(typed[1:])
         return typed[1:]
-    def run(self, scope: dict[str, any], later_stack: list[any]) -> any:
+    def run(self) -> any:
         #print(f'Unary.run {scope} {later_stack}')
-        x = eval(self.sub[0], scope, later_stack)
+        x = eval(self.sub[0])
         #print(f'{self.token}({x})')
         return self.op(x)
     def show(self) -> str:
         return f'{self.token}({_show(self.sub[0])})'
+
 
 class Binary(ICFP):
     def __init__(self, token: str) -> None:
@@ -115,16 +128,16 @@ class Binary(ICFP):
         if isinstance(self.sub[-1], ICFP):
             rest = self.sub[-1].extract(rest)
         return rest
-    def run(self, scope: dict[str, any], later_stack: list[any]) -> any:
+    def run(self) -> any:
         if self.is_apply:
             #print(f'Apply {scope} {later_stack}')
-            y = eval(self.sub[1], scope, later_stack)
-            later_stack.append(y)
-            #print(f'{self.token} {_show(self.sub[0])}({y})')
-            return eval(self.sub[0], scope, later_stack)
+            lmbda = eval(self.sub[0])
+            if isinstance(lmbda.sub[0], ICFP):
+                lmbda.sub[0].substitute(lmbda.key, self.sub[1])
+            return eval(lmbda.sub[0])
         #print(f'Binary.run {scope} {later_stack}')
-        x = eval(self.sub[0], scope, later_stack)
-        y = eval(self.sub[1], scope, later_stack)
+        x = eval(self.sub[0])
+        y = eval(self.sub[1])
         #print(f'{self.token}({x}, {y})')
         return self.op(x, y)
     def show(self) -> str:
@@ -165,14 +178,14 @@ class If(ICFP):
         if isinstance(self.sub[-1], ICFP):
             rest = self.sub[-1].extract(rest)
         return rest
-    def run(self, scope: dict[str, any], later_stack: list[any]) -> any:
+    def run(self) -> any:
         #print(f'If.run {scope} {later_stack}')
-        tf = eval(self.sub[0], scope, later_stack)
+        tf = eval(self.sub[0])
         #print(f'{self.token}({tf})')
         if tf:
-            return eval(self.sub[1], scope, later_stack)
+            return eval(self.sub[1])
         else:
-            return eval(self.sub[2], scope, later_stack)
+            return eval(self.sub[2])
     def show(self) -> str:
         return f'{self.token}({_show(self.sub[0])} {_show(self.sub[1])} {_show(self.sub[2])})'
 
@@ -186,16 +199,12 @@ class Lambda(ICFP):
         rest = typed[1:]
         if isinstance(typed[0], ICFP):
             rest = typed[0].extract(rest)
+        #print(self.show())
         return rest
-    def run(self, scope: dict[str, any], later_stack: list[any]) -> any:
-        #print(f'Lambda.run {scope} {later_stack}')
-        next_scope = scope.copy()
-        v = later_stack.pop()
-        next_scope[self.key] = v
-        #print(f'{self.token} {v}')
-        return eval(self.sub[0], next_scope, later_stack)
+    def run(self) -> any:
+        return self
     def show(self) -> str:
-        return f'{self.token} {_show(self.sub[0])}'
+        return f'{self.token} [{_show(self.sub[0])}]'
 
 class v(ICFP):
     def __init__(self, token: str) -> None:
@@ -203,10 +212,10 @@ class v(ICFP):
         self.key = token[1:]
     def extract(self, typed: list[any]) -> list[any]:
         return typed
-    def run(self, scope: dict[str, any], later_stack: list[any]) -> any:
-        v = scope[self.key]
-        #print(f'-> {self.token} {v}')
-        return v
+    def run(self) -> any:
+        if not self.sub:
+            err(f'{self.token} not replaced')
+        return eval(self.sub[0])
     def show(self) -> str:
         return self.token
 
