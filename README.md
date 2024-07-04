@@ -11,6 +11,14 @@ I don't understand why language test fails.  Ahh!  Stopping.
 [Discord](https://discord.com/channels/1118159165060292668/1118159165060292671)
 [Home](https://icfpcontest2024.github.io/)
 
+### Server source
+
+Post tourney server source (Haskell).
+
+[ICFP2024](https://github.com/icfpcontest2024/icfpc2024/tree/main)
+[Task](https://github.com/icfpcontest2024/icfpc2024/blob/main/static/task.md)
+[Language](https://github.com/icfpcontest2024/icfpc2024/blob/main/static/language.md)
+
 ### Team *Slow*
 
 - user: <grahamsspiers@gmail.com>
@@ -49,6 +57,16 @@ I'm going to use *python* since I don't seem to need extra computational speed.
 
 ```
 pip3 install requests
+```
+
+## *git*
+
+```sh
+$ git remote -v
+napcat  <graspi@napcatstudio.com>:~/git/icfp2024 (fetch)
+napcat  <graspi@napcatstudio.com>:~/git/icfp2024 (push)
+origin  <git@github.com>:GrahamSpiers/icfp2024.git (fetch)
+origin  <git@github.com>:GrahamSpiers/icfp2024.git (push)
 ```
 
 ## Setup
