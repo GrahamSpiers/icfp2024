@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	S_ASCII    = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\x22#$%&'()*+,-./:;<=>?@[\\]^_`|~ \n"
+	S_ASCII    = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`|~ \n"
 	I_BASE     = 94
 	ZERO_INDEX = 33
 )
@@ -130,7 +130,7 @@ func NewICFP(icfp string) (*ICFP, error) {
 	if len(rest) > 0 {
 		return nil, fmt.Errorf("unparsed tokens %v in %s", rest, icfp)
 	}
-	fmt.Printf("||| %q |||\n", icfp)
+	//fmt.Printf("||| %q |||\n", icfp)
 	return &ICFP{
 			Tree: top,
 		},
@@ -252,8 +252,7 @@ func RecReduce(token any) any {
 			}
 			if x.Token[0] == 'L' {
 				// Apply y to x
-				y := op.Args[1]
-				return Substitute(x, y)
+				return Substitute(x, op.Args[1])
 			} else {
 				op.Args[0] = RecReduce((op.Args[0]))
 				return op
@@ -281,7 +280,7 @@ func RecReduce(token any) any {
 			return op
 		}
 	case 'L':
-		fallthrough
+		return op
 	case 'v':
 		fallthrough
 	default:
@@ -290,28 +289,24 @@ func RecReduce(token any) any {
 	}
 }
 
-func Substitute(x Op, y any) any {
+func Substitute(el Op, y any) any {
 	opStack := NewStack()
-	opStack.Push(x)
+	opStack.Push(el)
 	for !opStack.IsEmpty() {
 		node := opStack.Pop()
-		op, ok := node.(Op)
-		if !ok {
-			continue
-		}
-		for i, arg := range op.Args {
-			argOp, ok := arg.(Op)
-			if !ok {
-				continue
-			}
-			if argOp.Token[0] == 'v' && argOp.Token[1:] == op.Token[1:] {
-				op.Args[i] = y
-			} else {
-				opStack.Push(argOp)
+		if op, ok := node.(Op); ok {
+			for i, arg := range op.Args {
+				if argOp, ok := arg.(Op); ok {
+					if argOp.Token[0] == 'v' && argOp.Token[1:] == el.Token[1:] {
+						op.Args[i] = y
+					} else {
+						opStack.Push(argOp)
+					}
+				}
 			}
 		}
 	}
-	return x
+	return el.Args[0]
 }
 
 // Binary returns the result of an ICFP "B" function.

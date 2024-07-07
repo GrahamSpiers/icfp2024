@@ -14,6 +14,10 @@ func main() {
 		if err != nil {
 			log.Fatalf("got %v opening %s", err, filename)
 		}
-		fmt.Printf("%v", lang.NewICFP(string(bs)).Run())
+		icfp, err := lang.NewICFP(string(bs))
+		if err != nil {
+			log.Fatalf("error: paring %s got %v", filename, err)
+		}
+		fmt.Printf("%v", icfp.Run())
 	}
 }

@@ -48,6 +48,7 @@ func TestS(t *testing.T) {
 		{"SB%,,/}Q/2,$_", "Hello World!"},
 		{"S./", "no"},
 		{"S9%3", "yes"},
+		//{"S\n", "\n"},
 	}
 	for _, test := range tests {
 		icfp, err := lang.NewICFP(test[0].(string))
