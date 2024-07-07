@@ -1,3 +1,4 @@
+// Functions and types for the ICFP 2024 Contest macro language (ICFP).
 package lang
 
 import (
@@ -12,15 +13,86 @@ const (
 	ZERO_INDEX = 33
 )
 
+var NO_ARGS = []any{}
+
+// Op is a tree representation of an ICFP macro.
+// Stores the original token.
 type Op struct {
 	Token string
+	Args  []any
 }
 
+func (op Op) Check() error {
+	if len(op.Token) == 0 {
+		return fmt.Errorf("missing token")
+	}
+	switch op.Token[0] {
+	case 'U':
+		fallthrough
+	case 'B':
+		fallthrough
+	case '?':
+		fallthrough
+	case 'L':
+		fallthrough
+	case 'v':
+		break
+	default:
+		return fmt.Errorf("bad indicator in operation %q", op.Token)
+	}
+	for i, arg := range op.Args {
+		if arg == nil {
+			return fmt.Errorf("arg %d missing for %q", i+1, op.Token)
+		}
+		opArg, ok := arg.(Op)
+		if !ok {
+			continue
+		}
+		err := opArg.Check()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (op Op) String() string {
+	ss := []string{op.Token}
+	for _, arg := range op.Args {
+		ss = append(ss, fmt.Sprintf("%v", arg))
+	}
+	return strings.Join(ss, " ")
+}
+
+// ICFPTree represents an entire ICFP macro.
 type ICFP struct {
-	Typed []any
+	Tree any
 }
 
-func NewICFP(icfp string) *ICFP {
+type VisitFunc func(any) bool
+
+// Visit calls a function on each node of the tree non-recursively.
+// If the function returs true the visiting returns.
+func Visit(token any, fn VisitFunc) {
+	stack := NewStack()
+	stack.Push(token)
+	for !stack.IsEmpty() {
+		token := stack.Pop()
+		// Visit
+		if fn(token) {
+			break
+		}
+		op, ok := token.(Op)
+		if !ok {
+			continue
+		}
+		for i := len(op.Args) - 1; i >= 0; i-- {
+			stack.Push(op.Args[i])
+		}
+	}
+}
+
+func NewICFP(icfp string) (*ICFP, error) {
 	raw := strings.Split(icfp, " ")
 	var typed = []any{}
 	for _, token := range raw {
@@ -35,86 +107,215 @@ func NewICFP(icfp string) *ICFP {
 		case 'S':
 			converted = SToString(token[1:])
 			//fmt.Printf("%q -> %q\n", token, converted)
+		case 'U':
+			converted = Op{Token: token, Args: []any{nil}}
+		case 'B':
+			converted = Op{Token: token, Args: []any{nil, nil}}
+		case '?':
+			converted = Op{Token: token, Args: []any{nil, nil, nil}}
+		case 'L':
+			converted = Op{Token: token, Args: []any{nil}}
+		case 'v':
+			converted = Op{Token: token, Args: NO_ARGS}
 		default:
-			converted = Op{Token: token}
+			return nil, fmt.Errorf("bad ICFP token %q", token)
 		}
 		typed = append(typed, converted)
 	}
+	//top, err := parse(typed)
+	top, rest, err := recParse(typed)
+	if err != nil {
+		return nil, fmt.Errorf("got '%v' parsing %q", err, icfp)
+	}
+	if len(rest) > 0 {
+		return nil, fmt.Errorf("unparsed tokens %v in %s", rest, icfp)
+	}
+	fmt.Printf("||| %q |||\n", icfp)
 	return &ICFP{
-		Typed: typed,
-	}
+			Tree: top,
+		},
+		nil
 }
 
-func (icfp *ICFP) Run() any {
-	tokens := icfp.Typed[:]
-	for len(tokens) > 1 {
-		fmt.Println(TokensToString(tokens))
-		tokens = icfp.Reduce(tokens)
+// Size returns the number of leaves in an ICFP token tree.
+func Size(token any) int {
+	count := 1
+	if op, ok := token.(Op); ok {
+		for _, arg := range op.Args {
+			count += Size(arg)
+		}
 	}
-	return tokens[0]
+	return count
 }
 
-func (icfp *ICFP) Reduce(tokens []any) []any {
-	hasReduced := false
-	i := 0
-	for !hasReduced {
-		if IsLiteral(tokens[i]) {
-			log.Fatalf("unexpected literal %v", tokens[i])
+// AsString creates a string representation of an ICFP token tree.
+func AsString(token any) string {
+	ss := []string{}
+	Visit(token, func(token any) bool {
+		op, ok := token.(Op)
+		switch ok {
+		case true:
+			ss = append(ss, op.Token)
+		case false:
+			ss = append(ss, fmt.Sprintf("%v", token))
 		}
-		//fmt.Printf("%v", tokens[i])
-		op := tokens[i].(Op)
-		switch op.Token[0] {
-		case 'U':
-			if IsLiteral(tokens[i+1]) {
-				uOfX := Unary(op.Token[1:], tokens[i+1])
-				//fmt.Printf("#:%d  uOfX:%v", len(tokens), uOfX)
-				next := append(tokens[:i], uOfX)
-				//fmt.Printf("next #%d", len(next))
-				tokens = append(next, tokens[i+2:]...)
-				hasReduced = true
-			}
-		case 'B':
-			if IsLiteral(tokens[i+1]) && IsLiteral(tokens[i+2]) {
-				uOfXY := Binary(op.Token[1:], tokens[i+1], tokens[i+2])
-				next := append(tokens[:i], uOfXY)
-				tokens = append(next, tokens[i+3:]...)
-				hasReduced = true
-			}
-		case 'L':
-			log.Fatalf("L not done")
-		case 'v':
-			log.Fatalf("v not done")
-		default:
-			log.Fatalf("unexpected literal %q", tokens[i])
-		}
-		i += 1
-	}
-	return tokens
-}
-
-func TokensToString(tokens []any) string {
-	ss := make([]string, len(tokens))
-	for i, token := range tokens {
-		switch token.(type) {
-		case bool:
-			if token.(bool) {
-				ss[i] = "T"
-			} else {
-				ss[i] = "F"
-			}
-		case int:
-			ss[i] = "I" + IToS(token.(int))
-		case string:
-			ss[i] = "S" + StringToS(token.(string))
-		case Op:
-			ss[i] = token.(Op).Token
-		default:
-			log.Fatalf("unknown typed token %v", token)
-		}
-	}
+		return false
+	})
 	return strings.Join(ss, " ")
 }
 
+// recParse recursivly builds an ICFP token tree.
+func recParse(typed []any) (any, []any, error) {
+	if len(typed) == 0 {
+		return nil, []any{}, fmt.Errorf("missing token")
+	}
+	token, rest := typed[0], typed[1:]
+	var x, y, condition any
+	var err error
+	if op, ok := token.(Op); ok {
+		// Op
+		switch op.Token[0] {
+		case 'B':
+			// 2 arguments.
+			x, rest, err = recParse(rest)
+			if err != nil {
+				return nil, []any{}, fmt.Errorf("%s[x] %v", op.Token, err)
+			}
+			y, rest, err = recParse(rest)
+			if err != nil {
+				return nil, []any{}, fmt.Errorf("%s[y] %v", op.Token, err)
+			}
+			op.Args[0] = x
+			op.Args[1] = y
+		case '?':
+			// 3 arguments.
+			condition, rest, err = recParse(rest)
+			if err != nil {
+				return nil, []any{}, fmt.Errorf("%s[?] %v", op.Token, err)
+			}
+			x, rest, err = recParse(rest)
+			if err != nil {
+				return nil, []any{}, fmt.Errorf("%s[x] %v", op.Token, err)
+			}
+			y, rest, err = recParse(rest)
+			if err != nil {
+				return nil, []any{}, fmt.Errorf("%s[y] %v", op.Token, err)
+			}
+			op.Args[0] = condition
+			op.Args[1] = x
+			op.Args[2] = y
+		case 'v':
+			// No arguments - do nothing.
+		default:
+			// U, L - 1 argument
+			x, rest, err = recParse(rest)
+			if err != nil {
+				return nil, []any{}, fmt.Errorf("%s[x] %v", op.Token, err)
+			}
+			op.Args[0] = x
+		}
+		return op, rest, nil
+	} else {
+		return token, rest, nil
+	}
+}
+
+// Run reduces an ICFP until it is just one token.
+func (icfp *ICFP) Run() any {
+	for {
+		fmt.Printf("[%d] %s\n", Size(icfp.Tree), AsString(icfp.Tree))
+		if IsLiteral(icfp.Tree) {
+			break
+		}
+		icfp.Tree = RecReduce(icfp.Tree)
+	}
+	return icfp.Tree
+}
+
+func RecReduce(token any) any {
+	op, ok := token.(Op)
+	if !ok {
+		return token
+	}
+	switch op.Token[0] {
+	case 'U':
+		if IsLiteral((op.Args[0])) {
+			return Unary(op.Token[1:], op.Args[0])
+		}
+		op.Args[0] = RecReduce(op.Args[0])
+		return op
+	case 'B':
+		if op.Token[1] == '$' {
+			x, ok := op.Args[0].(Op)
+			if !ok {
+				log.Fatalf("literal argument %v for %q", op.Args[0], op.Token)
+			}
+			if x.Token[0] == 'L' {
+				// Apply y to x
+				y := op.Args[1]
+				return Substitute(x, y)
+			} else {
+				op.Args[0] = RecReduce((op.Args[0]))
+				return op
+			}
+		}
+		if IsLiteral((op.Args[0])) {
+			if IsLiteral((op.Args[1])) {
+				return Binary(op.Token[1:], op.Args[0], op.Args[1])
+			} else {
+				op.Args[1] = RecReduce(op.Args[1])
+			}
+		} else {
+			op.Args[0] = RecReduce((op.Args[0]))
+		}
+		return op
+	case '?':
+		if IsLiteral(op.Args[0]) {
+			if op.Args[0].(bool) {
+				return op.Args[1]
+			} else {
+				return op.Args[2]
+			}
+		} else {
+			op.Args[0] = RecReduce(op.Args[0])
+			return op
+		}
+	case 'L':
+		fallthrough
+	case 'v':
+		fallthrough
+	default:
+		log.Fatalf("can't reduce %q", op.Token)
+		return nil
+	}
+}
+
+func Substitute(x Op, y any) any {
+	opStack := NewStack()
+	opStack.Push(x)
+	for !opStack.IsEmpty() {
+		node := opStack.Pop()
+		op, ok := node.(Op)
+		if !ok {
+			continue
+		}
+		for i, arg := range op.Args {
+			argOp, ok := arg.(Op)
+			if !ok {
+				continue
+			}
+			if argOp.Token[0] == 'v' && argOp.Token[1:] == op.Token[1:] {
+				op.Args[i] = y
+			} else {
+				opStack.Push(argOp)
+			}
+		}
+	}
+	return x
+}
+
+// Binary returns the result of an ICFP "B" function.
+// Does not handle apply (B$).
 func Binary(body string, x any, y any) any {
 	switch body {
 	case "+":
@@ -140,7 +341,7 @@ func Binary(body string, x any, y any) any {
 		case string:
 			return x.(string) == y.(string)
 		default:
-			log.Fatalf("B= mismatched types")
+			log.Fatalf("B= mismatched types %v=%v", x, y)
 		}
 	case "|":
 		return x.(bool) || y.(bool)
@@ -152,17 +353,15 @@ func Binary(body string, x any, y any) any {
 		return y.(string)[:x.(int)]
 	case "D":
 		return y.(string)[x.(int):]
-	case "$":
-		log.Fatalf("B$ not done")
-		return nil
 	default:
-		log.Fatalf("unknown B operator %q", body)
+		log.Fatalf("unhandled B operator %q", body)
 		return nil
 	}
 	log.Fatalf("B%s undefined", body)
 	return nil
 }
 
+// Unary returns the result of an ICFP "U" function.
 func Unary(body string, x any) any {
 	switch body {
 	case "!":
@@ -179,6 +378,7 @@ func Unary(body string, x any) any {
 	}
 }
 
+// IsLiteral returns true if this token is an ICFP non-operator.
 func IsLiteral(token any) bool {
 	switch token.(type) {
 	case bool:
@@ -191,24 +391,6 @@ func IsLiteral(token any) bool {
 		return false
 	}
 }
-
-/*
-func EvalToken(token string) any {
-	switch token[0] {
-	case 'T':
-		return true
-	case 'F':
-		return false
-	case 'I':
-		return ITokenToInt(token)
-	case 'S':
-		return STokenToString(token)
-	default:
-		log.Fatalf("unknown token type %q in %q", token[0], token)
-		return nil
-	}
-}
-*/
 
 func SToI(s string) int {
 	i := 0
@@ -260,10 +442,12 @@ func StringToS(str string) string {
 	return string(bs)
 }
 
+// ITokenToInt returns converts an ICFP "I" token to an integer.
 func ITokenToInt(token string) int {
 	return IToInt(token[1:])
 }
 
+// IToInt converts the body portion of an ICFP "I" token to an integer.
 func IToInt(s string) int {
 	i := 0
 	for _, b := range []byte(s) {
