@@ -69,6 +69,7 @@ type ICFP struct {
 	Tree         any
 	EvalCache    map[int]any
 	NextCacheKey int
+	CacheHits    int
 }
 
 type VisitFunc func(any) bool
@@ -112,6 +113,7 @@ func NewICFP(icfp string) (*ICFP, error) {
 			Tree:         top,
 			EvalCache:    make(map[int]any),
 			NextCacheKey: 0,
+			CacheHits:    0,
 		},
 		nil
 }
@@ -140,7 +142,8 @@ func Typed(icfp string) ([]any, error) {
 		case 'L':
 			converted = Op{Token: token, Args: []any{nil}}
 		case 'v':
-			converted = Op{Token: token, Args: NO_ARGS}
+			// v stores applied
+			converted = Op{Token: token, Args: []any{nil, nil}}
 		default:
 			return nil, fmt.Errorf("bad ICFP token %q", token)
 		}
@@ -153,8 +156,10 @@ func Typed(icfp string) ([]any, error) {
 func Size(token any) int {
 	count := 1
 	if op, ok := token.(Op); ok {
-		for _, arg := range op.Args {
-			count += Size(arg)
+		if op.Token[0] != 'v' {
+			for _, arg := range op.Args {
+				count += Size(arg)
+			}
 		}
 	}
 	return count
@@ -218,7 +223,7 @@ func RecParse(typed []any) (any, []any, error) {
 			op.Args[1] = x
 			op.Args[2] = y
 		case 'v':
-			// No arguments - do nothing.
+			// No "real" arguments - do nothing.
 		default:
 			// U, L - 1 argument
 			x, rest, err = RecParse(rest)
@@ -242,6 +247,7 @@ func (icfp *ICFP) Run() any {
 		}
 		icfp.Tree = icfp.RecReduce(icfp.Tree)
 	}
+	//fmt.Printf("cache hits:%d\n", icfp.CacheHits)
 	return icfp.Tree
 }
 
@@ -295,11 +301,14 @@ func (icfp *ICFP) RecReduce(token any) any {
 	case 'L':
 		return op
 	case 'v':
-		cacheKey := op.Args[1].(int)
+		cacheKey := op.Args[0].(int)
 		if result, ok := icfp.EvalCache[cacheKey]; ok {
+			//fmt.Printf("using cache %d\n", cacheKey)
+			icfp.CacheHits += 1
 			return result
 		}
-		result := icfp.RecReduce(op.Args[0])
+		//fmt.Printf("no cache for %d\n", cacheKey)
+		result := icfp.RecReduce(op.Args[1])
 		icfp.EvalCache[cacheKey] = result
 		return result
 	default:
@@ -316,13 +325,15 @@ func (icfp *ICFP) Substitute(el Op, y any) any {
 	for !opStack.IsEmpty() {
 		node := opStack.Pop()
 		if op, ok := node.(Op); ok {
-			for i, arg := range op.Args {
+			for _, arg := range op.Args {
 				if argOp, ok := arg.(Op); ok {
 					if argOp.Token[0] == 'L' && argOp.Token[1:] == el.Token[1:] {
 					} else if argOp.Token[0] == 'v' && argOp.Token[1:] == el.Token[1:] {
-						argOp.Args = append(argOp.Args, y, cacheKey)
+						//fmt.Printf("cache %d assigned\n", cacheKey)
+						argOp.Args[0] = cacheKey
+						argOp.Args[1] = y // Note no substitution in y!
 						// Add caching substitution.
-						op.Args[i] = argOp
+						//op.Args[i] = argOp
 					} else {
 						opStack.Push(argOp)
 					}

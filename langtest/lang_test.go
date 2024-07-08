@@ -217,6 +217,30 @@ func TestApply(t *testing.T) {
 	}
 }
 
+func TestCache(t *testing.T) {
+	tests := [][]any{
+		{"B$ Lx B+ vx vx I$", 6, 1},
+		{"B$ Lx B+ I$ vx I$", 6, 0},
+		{"B$ L# B$ L\" B+ v\" v\" B* I$ I# v8", 12, 1},
+		//{"B$ B$ L# L$ v# B. SB%,,/ S}Q/2,$_ IK", "Hello World!", 1},
+		//{"B$ B$ L\" B$ L# B$ v\" B$ v# v# L# B$ v\" B$ v# v# L\" L# ? B= v# I! I\" B$ L$ B+ B$ v\" v$ B$ v\" v$ B- v# I\" I%", 16},
+	}
+	for _, test := range tests {
+		//t.Logf("%q\n", test[0])
+		icfp, err := lang.NewICFP(test[0].(string))
+		if err != nil {
+			t.Fatalf("got %v from %q", err, test[0])
+		}
+		result := icfp.Run()
+		if test[1] != result {
+			t.Fatalf("got %v expected %v from %s", result, test[1], test[0])
+		}
+		if test[2] != icfp.CacheHits {
+			t.Fatalf("got %d cache hits expected %d from %s", icfp.CacheHits, test[2], test[0])
+		}
+	}
+}
+
 func TestEval(t *testing.T) {
 	test := "B$ B$ L\" B$ L# B$ v\" B$ v# v# L# B$ v\" B$ v# v# L\" L# ? B= v# I! I\" B$ L$ B+ B$ v\" v$ B$ v\" v$ B- v# I\" I%"
 	// -> 16
