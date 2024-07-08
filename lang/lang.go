@@ -93,6 +93,26 @@ func Visit(token any, fn VisitFunc) {
 }
 
 func NewICFP(icfp string) (*ICFP, error) {
+	//top, err := parse(typed)
+	typed, err := Typed(icfp)
+	if err != nil {
+		return nil, fmt.Errorf("got '%v' typing %q", err, icfp)
+	}
+	top, rest, err := RecParse(typed)
+	if err != nil {
+		return nil, fmt.Errorf("got '%v' parsing %q", err, icfp)
+	}
+	if len(rest) > 0 {
+		return nil, fmt.Errorf("unparsed tokens %v in %s", rest, icfp)
+	}
+	//fmt.Printf("||| %q |||\n", icfp)
+	return &ICFP{
+			Tree: top,
+		},
+		nil
+}
+
+func Typed(icfp string) ([]any, error) {
 	raw := strings.Split(icfp, " ")
 	var typed = []any{}
 	for _, token := range raw {
@@ -122,19 +142,7 @@ func NewICFP(icfp string) (*ICFP, error) {
 		}
 		typed = append(typed, converted)
 	}
-	//top, err := parse(typed)
-	top, rest, err := recParse(typed)
-	if err != nil {
-		return nil, fmt.Errorf("got '%v' parsing %q", err, icfp)
-	}
-	if len(rest) > 0 {
-		return nil, fmt.Errorf("unparsed tokens %v in %s", rest, icfp)
-	}
-	//fmt.Printf("||| %q |||\n", icfp)
-	return &ICFP{
-			Tree: top,
-		},
-		nil
+	return typed, nil
 }
 
 // Size returns the number of leaves in an ICFP token tree.
@@ -149,6 +157,7 @@ func Size(token any) int {
 }
 
 // AsString creates a string representation of an ICFP token tree.
+// Note that this is converted representation (true for T, etc.).
 func AsString(token any) string {
 	ss := []string{}
 	Visit(token, func(token any) bool {
@@ -164,8 +173,8 @@ func AsString(token any) string {
 	return strings.Join(ss, " ")
 }
 
-// recParse recursivly builds an ICFP token tree.
-func recParse(typed []any) (any, []any, error) {
+// RecParse recursivly builds an ICFP token tree.
+func RecParse(typed []any) (any, []any, error) {
 	if len(typed) == 0 {
 		return nil, []any{}, fmt.Errorf("missing token")
 	}
@@ -177,11 +186,11 @@ func recParse(typed []any) (any, []any, error) {
 		switch op.Token[0] {
 		case 'B':
 			// 2 arguments.
-			x, rest, err = recParse(rest)
+			x, rest, err = RecParse(rest)
 			if err != nil {
 				return nil, []any{}, fmt.Errorf("%s[x] %v", op.Token, err)
 			}
-			y, rest, err = recParse(rest)
+			y, rest, err = RecParse(rest)
 			if err != nil {
 				return nil, []any{}, fmt.Errorf("%s[y] %v", op.Token, err)
 			}
@@ -189,15 +198,15 @@ func recParse(typed []any) (any, []any, error) {
 			op.Args[1] = y
 		case '?':
 			// 3 arguments.
-			condition, rest, err = recParse(rest)
+			condition, rest, err = RecParse(rest)
 			if err != nil {
 				return nil, []any{}, fmt.Errorf("%s[?] %v", op.Token, err)
 			}
-			x, rest, err = recParse(rest)
+			x, rest, err = RecParse(rest)
 			if err != nil {
 				return nil, []any{}, fmt.Errorf("%s[x] %v", op.Token, err)
 			}
-			y, rest, err = recParse(rest)
+			y, rest, err = RecParse(rest)
 			if err != nil {
 				return nil, []any{}, fmt.Errorf("%s[y] %v", op.Token, err)
 			}
@@ -208,7 +217,7 @@ func recParse(typed []any) (any, []any, error) {
 			// No arguments - do nothing.
 		default:
 			// U, L - 1 argument
-			x, rest, err = recParse(rest)
+			x, rest, err = RecParse(rest)
 			if err != nil {
 				return nil, []any{}, fmt.Errorf("%s[x] %v", op.Token, err)
 			}
@@ -223,7 +232,7 @@ func recParse(typed []any) (any, []any, error) {
 // Run reduces an ICFP until it is just one token.
 func (icfp *ICFP) Run() any {
 	for {
-		fmt.Printf("[%d] %s\n", Size(icfp.Tree), AsString(icfp.Tree))
+		//fmt.Printf("[%d] %s\n", Size(icfp.Tree), AsString(icfp.Tree))
 		if IsLiteral(icfp.Tree) {
 			break
 		}
@@ -297,7 +306,8 @@ func Substitute(el Op, y any) any {
 		if op, ok := node.(Op); ok {
 			for i, arg := range op.Args {
 				if argOp, ok := arg.(Op); ok {
-					if argOp.Token[0] == 'v' && argOp.Token[1:] == el.Token[1:] {
+					if argOp.Token[0] == 'L' && argOp.Token[1:] == el.Token[1:] {
+					} else if argOp.Token[0] == 'v' && argOp.Token[1:] == el.Token[1:] {
 						op.Args[i] = y
 					} else {
 						opStack.Push(argOp)

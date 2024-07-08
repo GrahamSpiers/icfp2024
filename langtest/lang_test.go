@@ -1,6 +1,8 @@
 package langtest
 
 import (
+	//"fmt"
+	"strings"
 	"testing"
 
 	"github.com/GrahamSpiers/icfp2024/lang"
@@ -197,9 +199,10 @@ func TestApply(t *testing.T) {
 		{"B$ L$ v$ I#", 2},
 		{"B$ B$ L1 L2 v2 I! I$", 3},
 		{"B$ B$ L1 L2 v1 I! I$", 0},
-		{"B$ L// B$ L\" B+ v\" v\" B* I$ I# v8", 12},
-		{"B$ B$ L// L$ v// SB%,,/}Q/2,$_ IK", "Hello World!"},
-		{"B$ B$ L// L$ v// B. SB%,,/ S}Q/2,$_ IK", "Hello World!"},
+		{"B$ L# B$ L\" B+ v\" v\" B* I$ I# v8", 12},
+		{"B$ B$ L# L$ v# SB%,,/}Q/2,$_ IK", "Hello World!"},
+		{"B$ B$ L# L$ v# B. SB%,,/ S}Q/2,$_ IK", "Hello World!"},
+		//{"B$ B$ L\" B$ L# B$ v\" B$ v# v# L# B$ v\" B$ v# v# L\" L# ? B= v# I! I\" B$ L$ B+ B$ v\" v$ B$ v\" v$ B- v# I\" I%", 16},
 	}
 	for _, test := range tests {
 		//t.Logf("%q\n", test[0])
@@ -213,3 +216,57 @@ func TestApply(t *testing.T) {
 		}
 	}
 }
+
+func TestEval(t *testing.T) {
+	test := "B$ B$ L\" B$ L# B$ v\" B$ v# v# L# B$ v\" B$ v# v# L\" L# ? B= v# I! I\" B$ L$ B+ B$ v\" v$ B$ v\" v$ B- v# I\" I%"
+	// -> 16
+	typed, err := lang.Typed(test)
+	if err != nil {
+		t.Fatalf("Typed got %v", err)
+	}
+	parsed, _, err := lang.RecParse(typed)
+	if err != nil {
+		t.Fatalf("RecParse got %v", err)
+	}
+	expected := strings.Split(test, " ") // 36 tokens
+	size := lang.Size(parsed)
+	if size != len(expected) {
+		t.Fatalf("size wrong  got %d expected %d", size, len(expected))
+	}
+}
+
+func TestRecReduce(t *testing.T) {
+	//test := "B$ B$ L\" B$ L# B$ v\" B$ v# v# L# B$ v\" B$ v# v# L\" L# ? B= v# I! I\" B$ L$ B+ B$ v\" v$ B$ v\" v$ B- v# I\" I%"
+	test := "B$ L# B$ L\" B+ v\" v\" B* I$ I# v8"
+	icfp, _ := lang.NewICFP(test)
+	count := 0
+	top := icfp.Tree
+	for !lang.IsLiteral(top) {
+		//fmt.Printf("%d: %d\n", count, lang.Size(top))
+		top = lang.RecReduce(top)
+		count += 1
+	}
+	if count != 5 {
+		t.Fatalf("got %d reductions expected 5", count)
+	}
+}
+
+/*
+func TestAsString(t *testing.T) {
+	test := "B$ B$ L\" B$ L# B$ v\" B$ v# v# L# B$ v\" B$ v# v# L\" L# ? B= v# I! I\" B$ L$ B+ B$ v\" v$ B$ v\" v$ B- v# I\" I%"
+	icfp, err := lang.NewICFP(test)
+	if err != nil {
+		t.Fatalf("got %v from %q", err, test[0])
+	}
+	if test != lang.AsString(icfp.Tree) {
+		t.Fatalf("%q != %q", lang.AsString(icfp.Tree), test)
+	}
+}
+	B$ (
+		B$ (	L#(L$ v#, (B. SB%,,/ S}Q/2,$_)
+		(IK))
+	((\v2 -> \v3 -> v2) ("Hello" . " World!")) 42
+
+	((v# -> v$ -> v#) (SB%,,/ . S}Q/2,$_)) IK
+	B$
+*/
