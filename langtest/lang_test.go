@@ -243,7 +243,7 @@ func TestRecReduce(t *testing.T) {
 	top := icfp.Tree
 	for !lang.IsLiteral(top) {
 		//fmt.Printf("%d: %d\n", count, lang.Size(top))
-		top = lang.RecReduce(top)
+		top = icfp.RecReduce(top)
 		count += 1
 	}
 	if count != 5 {

@@ -66,7 +66,9 @@ func (op Op) String() string {
 
 // ICFPTree represents an entire ICFP macro.
 type ICFP struct {
-	Tree any
+	Tree         any
+	EvalCache    map[int]any
+	NextCacheKey int
 }
 
 type VisitFunc func(any) bool
@@ -107,7 +109,9 @@ func NewICFP(icfp string) (*ICFP, error) {
 	}
 	//fmt.Printf("||| %q |||\n", icfp)
 	return &ICFP{
-			Tree: top,
+			Tree:         top,
+			EvalCache:    make(map[int]any),
+			NextCacheKey: 0,
 		},
 		nil
 }
@@ -236,22 +240,22 @@ func (icfp *ICFP) Run() any {
 		if IsLiteral(icfp.Tree) {
 			break
 		}
-		icfp.Tree = RecReduce(icfp.Tree)
+		icfp.Tree = icfp.RecReduce(icfp.Tree)
 	}
 	return icfp.Tree
 }
 
-func RecReduce(token any) any {
+func (icfp *ICFP) RecReduce(token any) any {
 	op, ok := token.(Op)
 	if !ok {
 		return token
 	}
 	switch op.Token[0] {
 	case 'U':
-		if IsLiteral((op.Args[0])) {
+		if IsLiteral(op.Args[0]) {
 			return Unary(op.Token[1:], op.Args[0])
 		}
-		op.Args[0] = RecReduce(op.Args[0])
+		op.Args[0] = icfp.RecReduce(op.Args[0])
 		return op
 	case 'B':
 		if op.Token[1] == '$' {
@@ -261,9 +265,9 @@ func RecReduce(token any) any {
 			}
 			if x.Token[0] == 'L' {
 				// Apply y to x
-				return Substitute(x, op.Args[1])
+				return icfp.Substitute(x, op.Args[1])
 			} else {
-				op.Args[0] = RecReduce((op.Args[0]))
+				op.Args[0] = icfp.RecReduce(op.Args[0])
 				return op
 			}
 		}
@@ -271,10 +275,10 @@ func RecReduce(token any) any {
 			if IsLiteral((op.Args[1])) {
 				return Binary(op.Token[1:], op.Args[0], op.Args[1])
 			} else {
-				op.Args[1] = RecReduce(op.Args[1])
+				op.Args[1] = icfp.RecReduce(op.Args[1])
 			}
 		} else {
-			op.Args[0] = RecReduce((op.Args[0]))
+			op.Args[0] = icfp.RecReduce(op.Args[0])
 		}
 		return op
 	case '?':
@@ -285,20 +289,28 @@ func RecReduce(token any) any {
 				return op.Args[2]
 			}
 		} else {
-			op.Args[0] = RecReduce(op.Args[0])
+			op.Args[0] = icfp.RecReduce(op.Args[0])
 			return op
 		}
 	case 'L':
 		return op
 	case 'v':
-		fallthrough
+		cacheKey := op.Args[1].(int)
+		if result, ok := icfp.EvalCache[cacheKey]; ok {
+			return result
+		}
+		result := icfp.RecReduce(op.Args[0])
+		icfp.EvalCache[cacheKey] = result
+		return result
 	default:
 		log.Fatalf("can't reduce %q", op.Token)
 		return nil
 	}
 }
 
-func Substitute(el Op, y any) any {
+func (icfp *ICFP) Substitute(el Op, y any) any {
+	cacheKey := icfp.NextCacheKey
+	icfp.NextCacheKey += 1
 	opStack := NewStack()
 	opStack.Push(el)
 	for !opStack.IsEmpty() {
@@ -308,7 +320,9 @@ func Substitute(el Op, y any) any {
 				if argOp, ok := arg.(Op); ok {
 					if argOp.Token[0] == 'L' && argOp.Token[1:] == el.Token[1:] {
 					} else if argOp.Token[0] == 'v' && argOp.Token[1:] == el.Token[1:] {
-						op.Args[i] = y
+						argOp.Args = append(argOp.Args, y, cacheKey)
+						// Add caching substitution.
+						op.Args[i] = argOp
 					} else {
 						opStack.Push(argOp)
 					}
